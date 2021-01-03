@@ -35,7 +35,8 @@ public class ConnectionSelect {
     private void openComPort() throws IOException, InterruptedException {
         this.serialPort = SerialPort.getCommPorts()[0];
         getSerialPort().openPort();
-        getSerialPort().setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
+        getSerialPort().setBaudRate(9600);
+        getSerialPort().setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 20, 20);
 
     }
 
@@ -58,8 +59,7 @@ public class ConnectionSelect {
 
         if(getSerialPort().isOpen() || getSocket().isConnected()) {
 
-            final ConnectionCommands connectionCommands;
-            connectionCommands = new ConnectionCommands(getTypeofConnection(), getSerialPort(), getSocket(), getArgs());
+            final ConnectionCommands connectionCommands = new ConnectionCommands(getTypeofConnection(), getSerialPort(), getSocket(), getArgs());
             final Protocol protocol = new Protocol(getArgs(), connectionCommands);
             protocol.commandsStart();
         }

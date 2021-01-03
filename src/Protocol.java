@@ -9,7 +9,7 @@ class Protocol {
     private final String[] args;
     private final ConnectionCommands connectionCommands;
     private int writtenLines = 0;
-    private final byte[] commandArray = new byte[66];
+    private byte[] commandArray = new byte[66];
     private final long LIMIT_TIME = 20000;
 
     private String[] getArgs() { return args; }
@@ -28,15 +28,15 @@ class Protocol {
     }
 
     public void commandsStart() throws IOException, InterruptedException {
-         final String command = getArgs()[1];
+        final String command = getArgs()[1];
         switch (command) {
             case "TOT":
                 setArray((byte) 0x51);
                 sendStarter();
-                Thread.sleep(300);
+                Thread.sleep(100);
                 setArray((byte) 0x80);
                 sendStarter();
-                Thread.sleep(300);
+                Thread.sleep(100);
                 setArray((byte) 0x52);
                 sendStarter();
                 break;
@@ -74,14 +74,18 @@ class Protocol {
 
     private void sendStarter() throws IOException, InterruptedException {
         final long start = System.currentTimeMillis();
-        boolean test = true;
+        boolean isCompost = true;
 
         connectionCommands.sendCommand(commandArray);
-        while(System.currentTimeMillis()-start < getLIMIT_TIME() && test){
+        while(System.currentTimeMillis()-start < getLIMIT_TIME() && isCompost){
             if(getConnectionCommands().checkInputStream(257)) {
                 byte[] answer = getConnectionCommands().readInputStream();
-                test = answer[0] == 0x52;
-                System.out.println(checkCRC(answer));
+                if(answer[0] == 0x52){
+                    isCompost = true;
+
+                }else{
+                    isCompost = false;
+                }
                 if(checkCRC(answer)){
                     callPrintParameters(answer);
                 }else{

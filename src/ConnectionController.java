@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.net.Socket;
 
 public abstract class ConnectionController {
-    private final long LIMIT_TIME = 60000;
+    private final long LIMIT_TIME = 10000;
     public long getLIMIT_TIME(){return LIMIT_TIME;}
     ConnectionController(){
 
     }
     public abstract void sendCommand(byte[] commandArray) throws IOException, InterruptedException;
-    public abstract boolean checkInputStream(int minBytes) throws IOException;
+    public abstract boolean checkInputStream(int minBytes) throws IOException, InterruptedException;
     public abstract byte[] readInputStream() throws IOException, InterruptedException;
     public abstract  int getInputStream() throws IOException;
     public abstract boolean receiveEnqs() throws IOException, InterruptedException;
@@ -64,13 +64,18 @@ class SocketCommands extends ConnectionController{
     }
 }
 
-class SerialPortCommands extends ConnectionController{
+class SerialPortCommands extends ConnectionController {
 
     private final SerialPort serialPort;
 
-    public SerialPort getSerialPort() { return serialPort; }
+    public SerialPort getSerialPort() {
+        return serialPort;
+    }
 
-    SerialPortCommands(SerialPort serialPort){ super();this.serialPort = serialPort; }
+    SerialPortCommands(SerialPort serialPort) {
+        super();
+        this.serialPort = serialPort;
+    }
 
     public void sendCommand(byte[] commandArray) throws IOException, InterruptedException {
         getSerialPort().getOutputStream().write(commandArray);
@@ -84,8 +89,6 @@ class SerialPortCommands extends ConnectionController{
     public byte[] readInputStream() throws IOException, InterruptedException {
         byte[] answer = new byte[getSerialPort().getInputStream().available()];
         getSerialPort().getInputStream().read(answer);
-        byte[] ack = new byte[] {0x06};
-        sendCommand(ack);
         return answer;
     }
 
@@ -99,11 +102,13 @@ class SerialPortCommands extends ConnectionController{
         final long start = System.currentTimeMillis();
         int enqReceived = 0;
         while (System.currentTimeMillis() - start < getLIMIT_TIME() / 4) {
-            if (checkInputStream(0)) {
-                byte[] input = readInputStream();
-                for (byte b : input)
-                    if (b == 0x05) { enqReceived++; }
-                    if(enqReceived >=5) {return true;}
+            byte[] input = readInputStream();
+            for (byte b : input)
+                if (b == 0x05) {
+                    enqReceived++;
+                }
+            if (enqReceived >= 5) {
+                return true;
             }
         }
         return false;
@@ -140,7 +145,7 @@ class ConnectionCommands extends ConnectionController {
 
     public void sendCommand(byte[] commandArray) throws IOException, InterruptedException {
         if (args[4].equals("true") && !enqsReceived) {
-            receiveEnqs();
+            enqsReceived = receiveEnqs();
         }
         if (getConnectionType().equals(getSOCKET_CONNECTION())) {
             socketCommands.sendCommand(commandArray);
@@ -149,7 +154,7 @@ class ConnectionCommands extends ConnectionController {
         }
     }
 
-    public boolean checkInputStream(int minBytes) throws IOException {
+    public boolean checkInputStream(int minBytes) throws IOException, InterruptedException {
         boolean inputStream = false;
         if (getConnectionType().equals(getSOCKET_CONNECTION())) {
             inputStream = socketCommands.checkInputStream(minBytes);
