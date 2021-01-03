@@ -5,7 +5,10 @@ public class OpenComPort {
     public static void main(String[] args) throws IOException, InterruptedException {
 
 
-        final ConnectionSelect connectionSelect = new ConnectionSelect("serialPort", args);
-        connectionSelect.selectConnectionType();
+        final ConnectionCommands connectionCommands = new ConnectionCommands("serialPort", args);
+        if(connectionCommands.selectConnection()){
+            Protocol protocol = new Protocol(args, connectionCommands);
+            protocol.commandsStart();
+        }
     }
 }

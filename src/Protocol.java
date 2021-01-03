@@ -1,8 +1,8 @@
+import ABNTCommands.ParametersReadingSimpleAnswer;
 import Util.ByteArrayUtils;
 import Util.CRC16CAS;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 
 class Protocol {
     
@@ -11,6 +11,8 @@ class Protocol {
     private int writtenLines = 0;
     private byte[] commandArray = new byte[66];
     private final long LIMIT_TIME = 20000;
+
+    private boolean endAnswer = false;
 
     private String[] getArgs() { return args; }
 
@@ -31,33 +33,40 @@ class Protocol {
         final String command = getArgs()[1];
         switch (command) {
             case "TOT":
-                setArray((byte) 0x51);
+                setArray("0x51");
                 sendStarter();
-                Thread.sleep(100);
-                setArray((byte) 0x80);
+                Thread.sleep(10);
+                setArray("0x80");
                 sendStarter();
-                Thread.sleep(100);
-                setArray((byte) 0x52);
+                Thread.sleep(10);
+                setArray("0x52");
+                endAnswer = true;
                 sendStarter();
                 break;
             case "TOD":
-                setArray((byte) 0x21);
+                setArray("0x21");
+                endAnswer = true;
                 sendStarter();
                 break;
             case "0xC1":
-                setArray((byte) 0xC1);
+                setArray("0xC1");
+                endAnswer = true;
                 sendStarter();
                 break;
+            case "0x51":
+                setArray((byte) 0x51);
+                endAnswer = true;
+                sendStarter();
         }
 
     }
 
-    private void setArray(byte command){
-        commandArray[0] = command;
-        commandArray[1] = 0x12;
-        commandArray[2] = 0x34;
-        commandArray[3] = 0x56;
-        if(command == (byte) 0xC1){
+    private void setArray(String command){
+        ParametersReadingSimpleAnswer parametersReadingSimpleAnswer = new ParametersReadingSimpleAnswer();
+        commandArray = parametersReadingSimpleAnswer.setCommandArray(command,"123456");
+
+
+        if(command.equals("0xC1")){
             commandArray[4] = (byte) 0x41;
             commandArray[7] = (byte) 0x01;
         }
@@ -73,23 +82,17 @@ class Protocol {
     }
 
     private void sendStarter() throws IOException, InterruptedException {
-        final long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         boolean isCompost = true;
-
         connectionCommands.sendCommand(commandArray);
-        while(System.currentTimeMillis()-start < getLIMIT_TIME() && isCompost){
+        while(System.currentTimeMillis()-start < getLIMIT_TIME()/5 && isCompost){
             if(getConnectionCommands().checkInputStream(257)) {
+                connectionCommands.sendCommand(new byte[] {0x06});
                 byte[] answer = getConnectionCommands().readInputStream();
-                if(answer[0] == 0x52){
-                    isCompost = true;
-
-                }else{
-                    isCompost = false;
-                }
-                if(checkCRC(answer)){
-                    callPrintParameters(answer);
-                }else{
-                    System.out.println("Invalid CRC.");
+                isCompost = answer[0] == 0x52;
+                callPrintParameters(answer);
+                if(isCompost){
+                    start = System.currentTimeMillis();
                 }
             }
         }
@@ -109,7 +112,8 @@ class Protocol {
             writeParametersFile(reading);
         }
         else if(CHECK_BYTE == (byte)0x20 || CHECK_BYTE == (byte)0x21 || CHECK_BYTE == (byte)0x22 || CHECK_BYTE == (byte)0x51){
-            printParametersSimpleCommand(reading);
+            ParametersReadingSimpleAnswer parametersReadingSimpleAnswer = new ParametersReadingSimpleAnswer();
+            parametersReadingSimpleAnswer.printAnswer(reading);
             writeParametersFile(reading);
         }
         else if(CHECK_BYTE == (byte) 0xC1){
@@ -139,6 +143,8 @@ class Protocol {
             System.out.println("Sub command: " + subCommand);
             System.out.println("Protocol: " + protocol);
             System.out.println("Authentication algorithm: " + authenticationAlgorithm);
+
+            writeParametersFile(reading);
         }
         else if(CHECK_BYTE != (byte) 0x05){
             writeParametersFile(reading);
@@ -147,45 +153,7 @@ class Protocol {
 
     }
 
-    private void printParametersSimpleCommand(final byte[] reading) {
-        System.out.println(reading.length);        final String command = ByteArrayUtils.byteToHex(reading[0]);
-        final String serialnumber = MessageFormat.format("{0}{1}{2}{3}", ByteArrayUtils.byteToHex(reading[1]), ByteArrayUtils.byteToHex(reading[2]), ByteArrayUtils.byteToHex(reading[3]), ByteArrayUtils.byteToHex(reading[4]));
-        final String actualData = reading[5] + ":" + reading[6] + ":" + reading[7] + " " + reading[8] + "/" + reading[9] + "/" + reading[10];
-        final String lastDemandData = reading[18] + ":" + reading[19] + ":" + reading[20] + " " + reading[21] + "/" + reading[22] + "/" + reading[23];
-        String multiplicationsConstantsCh1 = "";
-        String multiplicationsConstantsCh2 = "";
-        String multiplicationsConstantsCh3 = "";
-        final String softwareVersion = ByteArrayUtils.byteToHex(reading[147]) + ByteArrayUtils.byteToHex(reading[148]);
-        for (int i = 128; i <= 133; i = i + 1) {
-            multiplicationsConstantsCh1 = multiplicationsConstantsCh1.concat(ByteArrayUtils.byteToHex(reading[i]));
-            if (i == 130) {
-                multiplicationsConstantsCh1 = multiplicationsConstantsCh1.concat("/");
-            }
-        }
-        for (int i = 134; i <= 139; i = i + 1) {
-            multiplicationsConstantsCh2 = multiplicationsConstantsCh2.concat(ByteArrayUtils.byteToHex(reading[i]));
-            if (i == 136) {
-                multiplicationsConstantsCh2 = multiplicationsConstantsCh2.concat("/");
-            }
-        }
-        for (int i = 140; i <= 145; i = i + 1) {
-            multiplicationsConstantsCh3 = multiplicationsConstantsCh3.concat(ByteArrayUtils.byteToHex(reading[i]));
-            if (i == 142) {
-                multiplicationsConstantsCh3 = multiplicationsConstantsCh3.concat("/");
-            }
-        }
 
-        System.out.println("Multiplication constants Channel 1: " + multiplicationsConstantsCh1);
-        System.out.println("Multiplication constants Channel 2: " + multiplicationsConstantsCh2);
-        System.out.println("Multiplication constants Channel 3: " + multiplicationsConstantsCh3);
-        System.out.println("Software Version: " + softwareVersion);
-
-        System.out.println("Command: " + command);
-        System.out.println("Series number: " + serialnumber);
-        System.out.println("Actual data: " + actualData);
-        System.out.println("Last demand data: " + lastDemandData);
-
-    }
 
     private void writeParametersFile(byte[] reading) throws IOException {
 
@@ -205,7 +173,7 @@ class Protocol {
                 getArgs()[3] + "," + ByteArrayUtils.byteToHex(reading).replaceAll(" ", ""));
         writtenLines = writtenLines + 1;
 
-        if (reading[5] >= 0x10) {
+        if (reading[5] >= 0x10 && endAnswer) {
             file.write(getArgs()[0] + "," + getArgs()[1] + "," + getArgs()[2] + "," +
                     getArgs()[3] + ",END");
 
