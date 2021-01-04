@@ -12,7 +12,7 @@ public class CRCCommands {
     }
 
     public byte[] generateCRC(byte[] commandArray, int start, int size) {
-        int crcInteger = CRC16CAS.calculate(commandArray, 0, 64);
+        int crcInteger = CRC16CAS.calculate(commandArray, start, size);
         byte msb = CRC16CAS.getMSB(crcInteger);
         byte lsb = CRC16CAS.getLSB(crcInteger);
 
