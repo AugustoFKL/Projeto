@@ -1,3 +1,6 @@
+import Commands.BaseProtocol;
+import Commands.ConnectionCommands.ConnectionCommands;
+
 import java.io.IOException;
 
 public class OpenComPort {

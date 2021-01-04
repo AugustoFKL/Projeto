@@ -40,8 +40,6 @@ public class ParametersReadingSimpleAnswer implements ABNTCommandsBase{
                 throw new IllegalStateException("Unexpected value: " + getCommand());
         }
 
-
-
         char[] readerSerialArray = getReaderSerial().toCharArray();
         String reader1 = readerSerialArray[0] + String.valueOf(readerSerialArray[1]);
         String reader2 = readerSerialArray[2] + String.valueOf(readerSerialArray[3]);
@@ -51,14 +49,11 @@ public class ParametersReadingSimpleAnswer implements ABNTCommandsBase{
         commandArray[2] = Byte.parseByte(reader2,16);
         commandArray[3] = Byte.parseByte(reader3,16);
 
-        System.out.println(ByteArrayUtils.byteToHex(commandArray[1]));
-
         byte[] crc = crcCommands.generateCRC(commandArray,0,COMMAND_LENGTH-2);
         commandArray[64] = crc[0];
         commandArray[65] = crc[1];
         return commandArray;
     }
-
 
     public void printAnswer(final byte[] reading) {
         final String command = ByteArrayUtils.byteToHex(reading[0]);

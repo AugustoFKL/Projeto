@@ -2,7 +2,7 @@ package ABNTCommands;
 
 import Util.ByteArrayUtils;
 
-public class MeterParametersReadingSimpleAnswer implements ABNTCommandsBase {
+public class MassMemoryCountersReading implements ABNTCommandsBase {
 
     private final int COMMAND_LENGTH = 66;
     private String command;
@@ -25,10 +25,18 @@ public class MeterParametersReadingSimpleAnswer implements ABNTCommandsBase {
         this.readerSerial = readerSerial;
         CRCCommands crcCommands = new CRCCommands();
         byte[] commandArray = new byte[getCOMMAND_LENGTH()];
-        if ("0x80".equals(getCommand())) {
-            commandArray[0] = (byte) 0x80;
-        } else {
-            throw new IllegalStateException("Unexpected value: " + getCommand());
+        switch (getCommand()) {
+            case "0x26":
+                commandArray[0] = (byte) 0x26;
+                break;
+            case "0x27":
+                commandArray[0] = (byte) 0x27;
+                break;
+            case "0x52":
+                commandArray[0] = (byte) 0x52;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + getCommand());
         }
 
         char[] readerSerialArray = getReaderSerial().toCharArray();
@@ -51,19 +59,12 @@ public class MeterParametersReadingSimpleAnswer implements ABNTCommandsBase {
         final String command = ByteArrayUtils.byteToHex(reading[0]);
         final String[] read = ByteArrayUtils.byteToHex(reading).split(" ");
         final String serialnumber = read[1] + read[2] + read[3] + read[4];
-        final String demandPres1 = read[5];
-        final String totalsPres1 = read[6];
-        final String demandPres2 = read[7];
-        final String totalsPres2 = read[8];
-        final String demandPres3 = read[9];
-        final String totalsPres3 = read[10];
+        final String blockNumber = read[5] + read[6];
 
         System.out.println("Command: " + command);
         System.out.println("Series number: " + serialnumber);
-        System.out.println("Demand channels 1/2/3: " + demandPres1 + "/" + demandPres2 + "/" + demandPres3);
-        System.out.println("Total channels 1/2/3: " + totalsPres1 + "/" + totalsPres2 + "/" + totalsPres3);
+        System.out.println("Block number: " + blockNumber);
 
 
     }
 }
-

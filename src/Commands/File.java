@@ -1,3 +1,5 @@
+package Commands;
+
 import java.io.*;
 import java.io.IOException;
 
@@ -6,7 +8,9 @@ public class File {
     private final String FILE_NAME = "C:\\Users\\augusto.fotino\\Desktop\\ParametersReading.txt";
     private java.io.File myFile;
 
-    public void fileCreator() { setMyFile(new java.io.File(FILE_NAME)); }
+    public void fileCreator() {
+        setMyFile(new java.io.File(FILE_NAME));
+    }
 
     public java.io.File getMyFile() { return myFile;}
 
