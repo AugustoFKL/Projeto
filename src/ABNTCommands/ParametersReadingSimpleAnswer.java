@@ -2,7 +2,9 @@ package ABNTCommands;
 
 import Util.ByteArrayUtils;
 
+
 public class ParametersReadingSimpleAnswer implements ABNTCommandsBase{
+
 
     private String command;
     private final int COMMAND_LENGTH = 66;
@@ -13,20 +15,47 @@ public class ParametersReadingSimpleAnswer implements ABNTCommandsBase{
 
     public String getCommand() { return command; }
 
+    public String getReaderSerial() {return readerSerial;}
+
     public byte[] setCommandArray(String command, String readerSerial) {
         this.command = command;
         this.readerSerial = readerSerial;
+        CRCCommands crcCommands = new CRCCommands();
         byte[] commandArray = new byte[COMMAND_LENGTH];
-        commandArray[0] = (byte) Integer.parseInt(command);
+        switch (getCommand()){
+            case "0x20":
+                commandArray[0] = (byte) 0x20;
+                break;
+            case "TOD":
+            case "0x21":
+                commandArray[0] = (byte) 0x21;
+                break;
+            case "0x22":
+                commandArray[0] = (byte) 0x22;
+                break;
+            case "0x51":
+                commandArray[0] = (byte) 0x51;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + getCommand());
+        }
 
-        char[] readerSerialArray = readerSerial.toCharArray();
-        String reader1 = String.valueOf(readerSerialArray[0]) + String.valueOf(readerSerialArray[1]);
-        String reader2 = String.valueOf(readerSerialArray[2]) + String.valueOf(readerSerialArray[3]);
-        String reader3 = String.valueOf(readerSerialArray[4]) + String.valueOf(readerSerialArray[5]);
 
-        commandArray[2] = (byte) Integer.parseInt(reader1);
-        commandArray[3] = (byte) Integer.parseInt(reader1);
-        commandArray[4] = (byte) Integer.parseInt(reader1);
+
+        char[] readerSerialArray = getReaderSerial().toCharArray();
+        String reader1 = readerSerialArray[0] + String.valueOf(readerSerialArray[1]);
+        String reader2 = readerSerialArray[2] + String.valueOf(readerSerialArray[3]);
+        String reader3 = readerSerialArray[4] + String.valueOf(readerSerialArray[5]);
+
+        commandArray[1] = Byte.parseByte(reader1,16);
+        commandArray[2] = Byte.parseByte(reader2,16);
+        commandArray[3] = Byte.parseByte(reader3,16);
+
+        System.out.println(ByteArrayUtils.byteToHex(commandArray[1]));
+
+        byte[] crc = crcCommands.generateCRC(commandArray,0,COMMAND_LENGTH-2);
+        commandArray[64] = crc[0];
+        commandArray[65] = crc[1];
         return commandArray;
     }
 

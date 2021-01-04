@@ -1,10 +1,10 @@
+import ABNTCommands.CommandSelect;
 import ABNTCommands.ParametersReadingSimpleAnswer;
 import Util.ByteArrayUtils;
-import Util.CRC16CAS;
 
 import java.io.IOException;
 
-class Protocol {
+class BaseProtocol {
     
     private final String[] args;
     private final ConnectionCommands connectionCommands;
@@ -14,7 +14,7 @@ class Protocol {
 
     private boolean endAnswer = false;
 
-    private String[] getArgs() { return args; }
+    public String[] getArgs() { return args; }
 
     public ConnectionCommands getConnectionCommands() { return connectionCommands; }
 
@@ -24,62 +24,52 @@ class Protocol {
 
     public long getLIMIT_TIME() { return LIMIT_TIME; }
 
-    public Protocol(String[] args, ConnectionCommands connectionCommands){
+    public BaseProtocol(String[] args, ConnectionCommands connectionCommands){
         this.args = args;
         this.connectionCommands = connectionCommands;
     }
 
     public void commandsStart() throws IOException, InterruptedException {
         final String command = getArgs()[1];
+        CommandSelect commandSelect = new CommandSelect(command);
+        System.out.println(command);
         switch (command) {
             case "TOT":
-                setArray("0x51");
                 sendStarter();
                 Thread.sleep(10);
-                setArray("0x80");
+                commandArray = commandSelect.setCommandArray(command,"123456");
                 sendStarter();
                 Thread.sleep(10);
-                setArray("0x52");
+                commandArray = commandSelect.setCommandArray(command,"123456");
                 endAnswer = true;
                 sendStarter();
                 break;
             case "TOD":
-                setArray("0x21");
-                endAnswer = true;
-                sendStarter();
-                break;
-            case "0xC1":
-                setArray("0xC1");
-                endAnswer = true;
-                sendStarter();
-                break;
             case "0x51":
-                setArray((byte) 0x51);
+            case "0xC1":
+            case "0x21":
+                commandArray = commandSelect.setCommandArray(command,"123456");
+                System.out.println(ByteArrayUtils.byteToHex(commandArray));
                 endAnswer = true;
                 sendStarter();
+                break;
         }
 
     }
 
-    private void setArray(String command){
-        ParametersReadingSimpleAnswer parametersReadingSimpleAnswer = new ParametersReadingSimpleAnswer();
-        commandArray = parametersReadingSimpleAnswer.setCommandArray(command,"123456");
+//    private void setArray(String command){
+//        ParametersReadingSimpleAnswer parametersReadingSimpleAnswer = new ParametersReadingSimpleAnswer();
+//        commandArray = parametersReadingSimpleAnswer.setCommandArray(command, "123456");
+//
+//
+//        if(command == (byte) 0xC1){
+//            commandArray[4] = (byte) 0x41;
+//            commandArray[7] = (byte) 0x01;
+//        }
+//        generateCRC();
+//    }
 
 
-        if(command.equals("0xC1")){
-            commandArray[4] = (byte) 0x41;
-            commandArray[7] = (byte) 0x01;
-        }
-        generateCRC();
-    }
-
-    private void generateCRC() {
-        int crc = CRC16CAS.calculate(commandArray, 0, 64);
-        byte msb = CRC16CAS.getMSB(crc);
-        byte lsb = CRC16CAS.getLSB(crc);
-        commandArray[64] = lsb;
-        commandArray[65] = msb;
-    }
 
     private void sendStarter() throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
@@ -98,11 +88,7 @@ class Protocol {
         }
     }
 
-    private boolean checkCRC(final byte[] reading) {
-        String crc = ByteArrayUtils.byteToHex(reading[reading.length - 1]) + ByteArrayUtils.byteToHex(reading[reading.length - 2]);
-        int crcInt = Integer.parseInt(crc, 16);
-        return CRC16CAS.check(crcInt, reading[257], reading[256]);
-    }
+
 
     private void callPrintParameters(final byte[] reading) throws IOException {
         final byte CHECK_BYTE = reading[0];
@@ -141,7 +127,7 @@ class Protocol {
             }
             System.out.println("Serial number: " + serialnumber);
             System.out.println("Sub command: " + subCommand);
-            System.out.println("Protocol: " + protocol);
+            System.out.println("BaseProtocol: " + protocol);
             System.out.println("Authentication algorithm: " + authenticationAlgorithm);
 
             writeParametersFile(reading);

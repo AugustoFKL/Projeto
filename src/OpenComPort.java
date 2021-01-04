@@ -7,8 +7,8 @@ public class OpenComPort {
 
         final ConnectionCommands connectionCommands = new ConnectionCommands("serialPort", args);
         if(connectionCommands.selectConnection()){
-            Protocol protocol = new Protocol(args, connectionCommands);
-            protocol.commandsStart();
+            BaseProtocol baseProtocol = new BaseProtocol(args, connectionCommands);
+            baseProtocol.commandsStart();
         }
     }
 }
